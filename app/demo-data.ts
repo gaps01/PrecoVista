@@ -10,6 +10,7 @@ export type RetailOffer = {
   note: string;
   url: string;
   affiliateUrl?: string;
+  cashbackPercent?: number;
 };
 
 export type DemoProduct = {
@@ -51,8 +52,8 @@ export const demoProducts: DemoProduct[] = [
     offers: [
       { store: 'Amazon', price: 3849, available: true, trustScore: 96, note: 'Vendido pela loja oficial', url: 'https://www.amazon.com.br/s?k=Samsung+Galaxy+S25+256GB' },
       { store: 'Mercado Livre', price: 3899, available: true, trustScore: 96, note: 'Loja oficial · vendedor verde', url: 'https://www.mercadolivre.com.br/samsung-galaxy-s25-5g-256gb-12gb-cmera-tripla-azul-claro/p/MLB45513356' },
-      { store: 'Magazine Luiza', price: 3999, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/galaxy%20s25%20256gb/' },
-      { store: 'Casas Bahia', price: 4099, available: true, trustScore: 93, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/galaxy-s25-256gb/b' },
+      { store: 'Magazine Luiza', price: 3999, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/galaxy%20s25%20256gb/', cashbackPercent: 2 },
+      { store: 'Casas Bahia', price: 4099, available: true, trustScore: 93, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/galaxy-s25-256gb/b', cashbackPercent: 3 },
       { store: 'Ponto', price: 0, available: false, trustScore: 92, note: 'Produto não encontrado agora', url: 'https://www.ponto.com.br/galaxy-s25-256gb/b' },
     ],
     history: history([5299, 5199, 4999, 4899, 4799, 4849, 4699, 4599, 4499, 4399, 4199, 3999, 3849]),
@@ -64,10 +65,10 @@ export const demoProducts: DemoProduct[] = [
     officialStore: true, trustScore: 95,
     listingUrl: 'https://www.mercadolivre.com.br/notebook-lenovo-ideapad-slim-3-amd-ryzen-7-16gb-512gb-w11-luna-grey/p/MLB58703437',
     offers: [
-      { store: 'Magazine Luiza', price: 3599, available: true, trustScore: 95, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/lenovo%20ideapad%20slim%203%20ryzen%207/' },
+      { store: 'Magazine Luiza', price: 3599, available: true, trustScore: 95, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/lenovo%20ideapad%20slim%203%20ryzen%207/', cashbackPercent: 2 },
       { store: 'Mercado Livre', price: 3699, available: true, trustScore: 95, note: 'Loja oficial · vendedor verde', url: 'https://www.mercadolivre.com.br/notebook-lenovo-ideapad-slim-3-amd-ryzen-7-16gb-512gb-w11-luna-grey/p/MLB58703437' },
       { store: 'Amazon', price: 3749, available: true, trustScore: 94, note: 'Oferta verificada', url: 'https://www.amazon.com.br/s?k=Lenovo+IdeaPad+Slim+3+Ryzen+7+16GB+512GB' },
-      { store: 'Casas Bahia', price: 3899, available: true, trustScore: 92, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/lenovo-ideapad-slim-3/b' },
+      { store: 'Casas Bahia', price: 3899, available: true, trustScore: 92, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/lenovo-ideapad-slim-3/b', cashbackPercent: 3 },
       { store: 'Ponto', price: 0, available: false, trustScore: 92, note: 'Produto não encontrado agora', url: 'https://www.ponto.com.br/lenovo-ideapad-slim-3/b' },
     ],
     history: history([4199, 4099, 3999, 3899, 3949, 3849, 3799, 3749, 3799, 3699, 3749, 3699, 3599]),
@@ -79,11 +80,11 @@ export const demoProducts: DemoProduct[] = [
     officialStore: true, trustScore: 98,
     listingUrl: 'https://www.mercadolivre.com.br/smart-tv-lg-50-4k-uhd-led-alexa-thinq-ai-hdr10-webos-24-controle-smart-magic-50ut8050/p/MLB39457123',
     offers: [
-      { store: 'Casas Bahia', price: 2299, available: true, trustScore: 95, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/smart-tv-lg-50-4k/b' },
+      { store: 'Casas Bahia', price: 2299, available: true, trustScore: 95, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/smart-tv-lg-50-4k/b', cashbackPercent: 3 },
       { store: 'Amazon', price: 2349, available: true, trustScore: 95, note: 'Oferta verificada', url: 'https://www.amazon.com.br/s?k=Smart+TV+LG+50+4K+ThinQ' },
       { store: 'Mercado Livre', price: 2399, available: true, trustScore: 98, note: 'MercadoLíder Platinum', url: 'https://www.mercadolivre.com.br/smart-tv-lg-50-4k-uhd-led-alexa-thinq-ai-hdr10-webos-24-controle-smart-magic-50ut8050/p/MLB39457123' },
-      { store: 'Magazine Luiza', price: 2449, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/smart%20tv%20lg%2050%204k/' },
-      { store: 'Fast Shop', price: 2499, available: true, trustScore: 96, note: 'Loja verificada', url: 'https://www.fastshop.com.br/web/q/smart-tv-lg-50' },
+      { store: 'Magazine Luiza', price: 2449, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/smart%20tv%20lg%2050%204k/', cashbackPercent: 2 },
+      { store: 'Fast Shop', price: 2499, available: true, trustScore: 96, note: 'Loja verificada', url: 'https://www.fastshop.com.br/web/q/smart-tv-lg-50', cashbackPercent: 1.5 },
     ],
     history: history([2899, 2799, 2849, 2749, 2699, 2749, 2599, 2649, 2549, 2499, 2449, 2399, 2299]),
   },
@@ -94,10 +95,10 @@ export const demoProducts: DemoProduct[] = [
     officialStore: true, trustScore: 97,
     listingUrl: 'https://www.mercadolivre.com.br/geladeira-frost-free-duplex-375-l-brm45jk-inox-brastemp-110v/p/MLB19954804',
     offers: [
-      { store: 'Ponto', price: 3299, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.ponto.com.br/geladeira-brastemp-375l/b' },
-      { store: 'Casas Bahia', price: 3349, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/geladeira-brastemp-375l/b' },
+      { store: 'Ponto', price: 3299, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.ponto.com.br/geladeira-brastemp-375l/b', cashbackPercent: 2 },
+      { store: 'Casas Bahia', price: 3349, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/geladeira-brastemp-375l/b', cashbackPercent: 3 },
       { store: 'Mercado Livre', price: 3399, available: true, trustScore: 97, note: 'Loja oficial · vendedor verde', url: 'https://www.mercadolivre.com.br/geladeira-frost-free-duplex-375-l-brm45jk-inox-brastemp-110v/p/MLB19954804' },
-      { store: 'Magazine Luiza', price: 3449, available: true, trustScore: 95, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/geladeira%20brastemp%20375l/' },
+      { store: 'Magazine Luiza', price: 3449, available: true, trustScore: 95, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/geladeira%20brastemp%20375l/', cashbackPercent: 2 },
       { store: 'Amazon', price: 0, available: false, trustScore: 94, note: 'Produto não encontrado agora', url: 'https://www.amazon.com.br/s?k=Geladeira+Brastemp+375L' },
     ],
     history: history([3099, 3049, 2999, 3049, 3099, 3199, 3149, 3249, 3199, 3299, 3299, 3349, 3299]),
@@ -109,8 +110,8 @@ export const demoProducts: DemoProduct[] = [
     officialStore: true, trustScore: 97, listingUrl: 'https://lista.mercadolivre.com.br/air-fryer-mondial-family-5l',
     offers: [
       { store: 'Amazon', price: 379, available: true, trustScore: 96, note: 'Oferta verificada', url: 'https://www.amazon.com.br/s?k=Air+Fryer+Mondial+Family+5L' },
-      { store: 'Magazine Luiza', price: 399, available: true, trustScore: 95, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/air%20fryer%20mondial%205l/' },
-      { store: 'Casas Bahia', price: 419, available: true, trustScore: 93, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/air-fryer-mondial-5l/b' },
+      { store: 'Magazine Luiza', price: 399, available: true, trustScore: 95, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/air%20fryer%20mondial%205l/', cashbackPercent: 2 },
+      { store: 'Casas Bahia', price: 419, available: true, trustScore: 93, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/air-fryer-mondial-5l/b', cashbackPercent: 3 },
       { store: 'Mercado Livre', price: 429, available: true, trustScore: 96, note: 'Vendedor verde', url: 'https://lista.mercadolivre.com.br/air-fryer-mondial-family-5l' },
       { store: 'Ponto', price: 0, available: false, trustScore: 92, note: 'Produto não encontrado agora', url: 'https://www.ponto.com.br/air-fryer-mondial-5l/b' },
     ],
@@ -122,9 +123,9 @@ export const demoProducts: DemoProduct[] = [
     rating: 4.8, reviewCount: 1840, soldCount: '+1 mil vendidos', sellerName: 'Brastemp', sellerLevel: 'MercadoLíder Gold',
     officialStore: true, trustScore: 95, listingUrl: 'https://lista.mercadolivre.com.br/lavadora-brastemp-12kg',
     offers: [
-      { store: 'Casas Bahia', price: 1849, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/lavadora-brastemp-12kg/b' },
-      { store: 'Ponto', price: 1899, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.ponto.com.br/lavadora-brastemp-12kg/b' },
-      { store: 'Magazine Luiza', price: 1949, available: true, trustScore: 95, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/lavadora%20brastemp%2012kg/' },
+      { store: 'Casas Bahia', price: 1849, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.casasbahia.com.br/lavadora-brastemp-12kg/b', cashbackPercent: 3 },
+      { store: 'Ponto', price: 1899, available: true, trustScore: 94, note: 'Loja verificada', url: 'https://www.ponto.com.br/lavadora-brastemp-12kg/b', cashbackPercent: 2 },
+      { store: 'Magazine Luiza', price: 1949, available: true, trustScore: 95, note: 'Loja verificada', url: 'https://www.magazineluiza.com.br/busca/lavadora%20brastemp%2012kg/', cashbackPercent: 2 },
       { store: 'Mercado Livre', price: 1999, available: true, trustScore: 95, note: 'Vendedor verde', url: 'https://lista.mercadolivre.com.br/lavadora-brastemp-12kg' },
       { store: 'Amazon', price: 0, available: false, trustScore: 94, note: 'Produto não encontrado agora', url: 'https://www.amazon.com.br/s?k=Lavadora+Brastemp+12kg' },
     ],

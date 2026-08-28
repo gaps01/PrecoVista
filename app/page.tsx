@@ -11,7 +11,7 @@ import {
   Tooltip, XAxis, YAxis,
 } from 'recharts';
 
-import { demoProducts, type DemoProduct, type ProductKind } from './demo-data';
+import { demoProducts, type DemoProduct, type ProductKind, type RetailOffer } from './demo-data';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -90,6 +90,8 @@ export default function Home() {
   const [email, setEmail] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const [alertSaved, setAlertSaved] = useState(false);
+  const [cashbackOffer, setCashbackOffer] = useState<RetailOffer | null>(null);
+  const [cashbackEmail, setCashbackEmail] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
 
   const product = products.find((item) => item.id === selectedId) ?? products[0];
@@ -143,6 +145,7 @@ export default function Home() {
     setTargetPrice(String(Math.floor(product.currentPrice * 0.9)));
     setShowAlert(false);
     setAlertSaved(false);
+    setCashbackOffer(null);
   }, [product]);
 
   async function selectProduct(item: DemoProduct) {
@@ -164,6 +167,20 @@ export default function Home() {
     const outboundEvent = { productId: product.id, store, affiliate, clickedAt: new Date().toISOString() };
     const stored = JSON.parse(window.localStorage.getItem('precovista-outbound-clicks') ?? '[]') as typeof outboundEvent[];
     window.localStorage.setItem('precovista-outbound-clicks', JSON.stringify([...stored.slice(-49), outboundEvent]));
+  }
+
+  function activateCashback(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!cashbackOffer) return;
+    const shoppingTrip = {
+      id: crypto.randomUUID(), productId: product.id, store: cashbackOffer.store,
+      email: cashbackEmail, estimatedCashback: cashbackOffer.price * (cashbackOffer.cashbackPercent ?? 0) / 100,
+      status: 'simulated-pending', createdAt: new Date().toISOString(),
+    };
+    window.localStorage.setItem(`precovista-trip-${shoppingTrip.id}`, JSON.stringify(shoppingTrip));
+    trackOutbound(cashbackOffer.store, Boolean(cashbackOffer.affiliateUrl));
+    window.open(cashbackOffer.affiliateUrl ?? cashbackOffer.url, '_blank', 'noopener,noreferrer');
+    setCashbackOffer(null);
   }
 
   async function saveAlert(event: FormEvent<HTMLFormElement>) {
@@ -228,7 +245,7 @@ export default function Home() {
 
           <div className="action-grid">
             <div className="offers-panel">
-              <div className="offers-heading"><div><strong>Onde comprar</strong><small>{availableOffers.length} lojas com este produto</small></div><span>Preços simulados</span></div>
+              <div className="offers-heading"><div><strong>Onde comprar</strong><small>{availableOffers.length} lojas com este produto · cashback demonstrativo</small></div><span>Dados simulados</span></div>
               <div className="offers-list">
                 {[...product.offers].sort((a, b) => Number(b.available) - Number(a.available) || a.price - b.price).map((offer) => {
                   const affiliate = Boolean(offer.affiliateUrl);
@@ -236,22 +253,30 @@ export default function Home() {
                     <span className="store-logo">{offer.store.split(' ').map((part) => part[0]).join('').slice(0, 2)}</span>
                     <span className="store-copy"><b>{offer.store}</b><small>{offer.note} · {offer.trustScore}/100</small></span>
                     {offer.available ? <>
-                      <strong className="offer-price">{money.format(offer.price)}{offer.price === availableOffers[0]?.price && <small>melhor preço</small>}</strong>
-                      <a href={offer.affiliateUrl ?? offer.url} target="_blank" rel={affiliate ? 'noopener noreferrer sponsored' : 'noopener noreferrer'} onClick={() => trackOutbound(offer.store, affiliate)}>Ver loja <ExternalLink /></a>
+                      <strong className="offer-price">{money.format(offer.price)}{offer.cashbackPercent ? <small>{offer.cashbackPercent}% de volta*</small> : offer.price === availableOffers[0]?.price && <small>melhor preço</small>}</strong>
+                      {offer.cashbackPercent
+                        ? <button className="cashback-trigger" onClick={() => setCashbackOffer(offer)}>Ativar e ir <ArrowRight /></button>
+                        : <a href={offer.affiliateUrl ?? offer.url} target="_blank" rel={affiliate ? 'noopener noreferrer sponsored' : 'noopener noreferrer'} onClick={() => trackOutbound(offer.store, affiliate)}>Ver loja <ExternalLink /></a>}
                     </> : <span className="not-found">Indisponível<small>Veja as outras lojas</small></span>}
                   </div>;
                 })}
               </div>
+              {cashbackOffer && <form className="cashback-form" onSubmit={activateCashback}>
+                <div><strong>Ativar cashback demonstrativo</strong><span>{cashbackOffer.cashbackPercent}% · cerca de {money.format(cashbackOffer.price * (cashbackOffer.cashbackPercent ?? 0) / 100)} após a compra ser aprovada</span></div>
+                <input type="email" aria-label="E-mail para acompanhar cashback" placeholder="Seu e-mail" value={cashbackEmail} onChange={(event) => setCashbackEmail(event.target.value)} required />
+                <button type="submit">Continuar para {cashbackOffer.store} <ArrowRight /></button>
+                <button type="button" className="cashback-close" onClick={() => setCashbackOffer(null)} aria-label="Cancelar cashback"><X /></button>
+              </form>}
             </div>
             <div className="secondary-action">
               <Bell />
-              <div><strong>Ainda não decidiu?</strong><span>Avisamos quando baixar.</span></div>
+              <div><strong>Ainda não decidiu?</strong><span>Avisamos quando baixar em qualquer loja.</span></div>
               <button onClick={() => setShowAlert((value) => !value)}>{showAlert ? 'Fechar' : 'Criar alerta'}</button>
             </div>
           </div>
 
           {showAlert && <form className="alert-form" onSubmit={saveAlert}>
-            {alertSaved ? <div className="alert-success"><Check /><span><b>Alerta criado.</b> Vamos acompanhar este preço.</span></div> : <>
+            {alertSaved ? <div className="alert-success"><Check /><span><b>Alerta criado.</b> Vamos acompanhar todas as lojas.</span></div> : <>
               <label>Preço desejado <span className="input-wrap"><b>R$</b><input inputMode="numeric" value={targetPrice} onChange={(event) => setTargetPrice(event.target.value.replace(/\D/g, ''))} required /></span></label>
               <label>Seu e-mail <input type="email" placeholder="voce@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
               <button type="submit">Ativar alerta <ArrowRight /></button>
@@ -282,11 +307,13 @@ export default function Home() {
                 <li><Check /> Produto novo e anúncio ativo</li>
                 <li><Check /> Nota mínima 4,5 e mais de 100 opiniões</li>
                 <li><Check /> Vendedor verde: {product.sellerLevel}</li>
-                <li><Check /> Preço sem anomalia crítica</li>
+                <li><Check /> Mesma variação e EAN comparados entre lojas</li>
+                <li><Check /> Preço final considerará frete e cupons</li>
+                <li><Check /> Comunidade poderá confirmar ou denunciar ofertas</li>
               </ul>
             </details>
           </div>
-          <p className="disclosure"><b>Transparência:</b> preços, avaliações e histórico deste protótipo são simulados. Na versão conectada, cada oferta exibirá fonte e horário da última atualização. Links podem gerar comissão sem custo extra; a comissão nunca altera o ranking.</p>
+          <p className="disclosure"><b>Transparência:</b> preços, avaliações, cashback e histórico deste protótipo são simulados. Na versão conectada, cada oferta exibirá fonte, regras e horário da última atualização. Cashback só será oferecido em lojas que autorizem tráfego incentivado e após a compra ser confirmada.</p>
         </article>
       </section>
 
