@@ -1,9 +1,9 @@
 'use client';
 
 import {
-  ArrowDownRight, ArrowRight, Bell, Check, ChevronDown, Info, Laptop, Menu,
-  Refrigerator, Search, ShieldCheck, Smartphone, Sparkles, Target,
-  TrendingDown, Tv, X,
+  ArrowRight, Bell, Check, ChefHat, ChevronDown, ExternalLink, Info, Laptop,
+  Menu, Refrigerator, Search, ShieldCheck, Smartphone, Star, Store,
+  TrendingDown, Tv, WashingMachine, X,
 } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
@@ -17,6 +17,9 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
 type ApiProductSummary = {
   id: number; external_id: string; title: string; category: string; current_price: string;
+  rating?: number; review_count?: number; sold_count?: string; seller_name?: string;
+  seller_level?: DemoProduct['sellerLevel']; official_store?: boolean; trust_score?: number;
+  listing_url?: string; affiliate_url?: string;
 };
 
 type ApiProductDetail = ApiProductSummary & {
@@ -30,16 +33,17 @@ const money = new Intl.NumberFormat('pt-BR', {
 
 const productIcons: Record<ProductKind, typeof Smartphone> = {
   phone: Smartphone, laptop: Laptop, tv: Tv, appliance: Refrigerator,
+  airfryer: ChefHat, washer: WashingMachine,
 };
 
 function ProductIcon({ kind, compact = false }: { kind: ProductKind; compact?: boolean }) {
   const Icon = productIcons[kind];
-  return <div className={compact ? 'product-icon compact' : 'product-icon'}><Icon aria-hidden="true" strokeWidth={1.55} /></div>;
+  return <span className={compact ? 'product-icon compact' : 'product-icon'}><Icon aria-hidden="true" strokeWidth={1.55} /></span>;
 }
 
 function PriceTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
   if (!active || !payload?.length) return null;
-  return <div className="chart-tooltip"><span>{label}</span><strong>{money.format(payload[0].value)}</strong></div>;
+  return <span className="chart-tooltip"><small>{label}</small><strong>{money.format(payload[0].value)}</strong></span>;
 }
 
 function inferKind(title: string, category: string): ProductKind {
@@ -55,18 +59,21 @@ function mapApiDetail(detail: ApiProductDetail): DemoProduct {
   const currentPrice = Number(detail.current_price);
   const formatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' });
   return {
-    id: detail.external_id,
-    backendId: detail.id,
-    kind: inferKind(detail.title, detail.category),
-    title: detail.title,
-    category: detail.category,
-    currentPrice,
-    originalPrice: Math.max(...prices, currentPrice),
-    lowestPrice: Math.min(...prices, currentPrice),
+    id: detail.external_id, backendId: detail.id, kind: inferKind(detail.title, detail.category),
+    title: detail.title, category: detail.category, currentPrice,
+    originalPrice: Math.max(...prices, currentPrice), lowestPrice: Math.min(...prices, currentPrice),
     marketAverage: Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length),
-    percentile: detail.prediction.current_percentile,
-    confidence: detail.prediction.confidence_score,
-    trend: detail.prediction.predicted_trend,
+    percentile: detail.prediction.current_percentile, confidence: detail.prediction.confidence_score,
+    trend: detail.prediction.predicted_trend, rating: detail.rating ?? 0,
+    reviewCount: detail.review_count ?? 0, soldCount: detail.sold_count ?? 'Vendas não informadas',
+    sellerName: detail.seller_name ?? 'Vendedor Mercado Livre', sellerLevel: detail.seller_level ?? 'MercadoLíder',
+    officialStore: detail.official_store ?? false, trustScore: detail.trust_score ?? 0,
+    listingUrl: detail.listing_url ?? 'https://www.mercadolivre.com.br/', affiliateUrl: detail.affiliate_url,
+    offers: [{
+      store: 'Mercado Livre', price: currentPrice, available: true,
+      trustScore: detail.trust_score ?? 0, note: 'Oferta recebida pela integração',
+      url: detail.listing_url ?? 'https://www.mercadolivre.com.br/', affiliateUrl: detail.affiliate_url,
+    }],
     history: detail.history.map((point, index) => ({
       date: index === detail.history.length - 1 ? 'Hoje' : formatter.format(new Date(point.collected_at)),
       price: Number(point.price),
@@ -79,19 +86,19 @@ export default function Home() {
   const [products, setProducts] = useState(demoProducts);
   const [apiSearchResults, setApiSearchResults] = useState<DemoProduct[] | null>(null);
   const [selectedId, setSelectedId] = useState(demoProducts[0].id);
-  const [targetPrice, setTargetPrice] = useState('2999');
+  const [targetPrice, setTargetPrice] = useState('3499');
   const [email, setEmail] = useState('');
+  const [showAlert, setShowAlert] = useState(false);
   const [alertSaved, setAlertSaved] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const product = products.find((item) => item.id === selectedId) ?? products[0];
-  const discount = Math.round((1 - product.currentPrice / product.originalPrice) * 100);
   const isGoodTime = product.percentile < 20;
+  const availableOffers = [...product.offers].filter((offer) => offer.available).sort((a, b) => a.price - b.price);
   const searchResults = useMemo(() => {
     const term = query.trim().toLocaleLowerCase('pt-BR');
     if (!term) return [];
-    const localResults = products.filter((item) => `${item.title} ${item.category}`.toLocaleLowerCase('pt-BR').includes(term));
-    return apiSearchResults ?? localResults;
+    return apiSearchResults ?? products.filter((item) => `${item.title} ${item.category}`.toLocaleLowerCase('pt-BR').includes(term));
   }, [apiSearchResults, products, query]);
 
   useEffect(() => {
@@ -106,16 +113,24 @@ export default function Home() {
         if (!response.ok) throw new Error('search unavailable');
         const summaries = await response.json() as ApiProductSummary[];
         setApiSearchResults(summaries.map((item) => {
-          const existing = products.find((productItem) => productItem.id === item.external_id);
-          return existing
-            ? { ...existing, backendId: item.id, currentPrice: Number(item.current_price) }
-            : {
-                id: item.external_id, backendId: item.id, kind: inferKind(item.title, item.category),
-                title: item.title, category: item.category, currentPrice: Number(item.current_price),
-                originalPrice: Number(item.current_price), lowestPrice: Number(item.current_price),
-                marketAverage: Number(item.current_price), percentile: 50, confidence: 45,
-                trend: 'stable' as const, history: [{ date: 'Hoje', price: Number(item.current_price) }],
-              };
+          const existing = products.find((entry) => entry.id === item.external_id);
+          if (existing) return { ...existing, backendId: item.id, currentPrice: Number(item.current_price) };
+          return {
+            id: item.external_id, backendId: item.id, kind: inferKind(item.title, item.category),
+            title: item.title, category: item.category, currentPrice: Number(item.current_price),
+            originalPrice: Number(item.current_price), lowestPrice: Number(item.current_price),
+            marketAverage: Number(item.current_price), percentile: 50, confidence: 45, trend: 'stable' as const,
+            rating: item.rating ?? 0, reviewCount: item.review_count ?? 0, soldCount: item.sold_count ?? 'Vendas não informadas',
+            sellerName: item.seller_name ?? 'Vendedor Mercado Livre', sellerLevel: item.seller_level ?? 'MercadoLíder',
+            officialStore: item.official_store ?? false, trustScore: item.trust_score ?? 0,
+            listingUrl: item.listing_url ?? 'https://www.mercadolivre.com.br/', affiliateUrl: item.affiliate_url,
+            offers: [{
+              store: 'Mercado Livre', price: Number(item.current_price), available: true,
+              trustScore: item.trust_score ?? 0, note: 'Oferta recebida pela integração',
+              url: item.listing_url ?? 'https://www.mercadolivre.com.br/', affiliateUrl: item.affiliate_url,
+            }],
+            history: [{ date: 'Hoje', price: Number(item.current_price) }],
+          };
         }));
       } catch (error) {
         if ((error as Error).name !== 'AbortError') setApiSearchResults(null);
@@ -125,30 +140,35 @@ export default function Home() {
   }, [products, query]);
 
   useEffect(() => {
-    setTargetPrice(String(Math.floor(product.currentPrice * 0.91)));
+    setTargetPrice(String(Math.floor(product.currentPrice * 0.9)));
+    setShowAlert(false);
     setAlertSaved(false);
   }, [product]);
 
   async function selectProduct(item: DemoProduct) {
     setSelectedId(item.id);
     setQuery('');
-    window.scrollTo({ top: 420, behavior: 'smooth' });
-    if (apiUrl && item.backendId) {
-      try {
-        const response = await fetch(`${apiUrl}/api/products/${item.backendId}`);
-        if (!response.ok) return;
-        const resolved = mapApiDetail(await response.json() as ApiProductDetail);
-        setProducts((current) => [...current.filter((entry) => entry.id !== resolved.id), resolved]);
-      } catch {
-        // The deployed prototype intentionally remains usable with its local demo data.
-      }
+    window.scrollTo({ top: 330, behavior: 'smooth' });
+    if (!apiUrl || !item.backendId) return;
+    try {
+      const response = await fetch(`${apiUrl}/api/products/${item.backendId}`);
+      if (!response.ok) return;
+      const resolved = mapApiDetail(await response.json() as ApiProductDetail);
+      setProducts((current) => [...current.filter((entry) => entry.id !== resolved.id), resolved]);
+    } catch {
+      // Demo data keeps the prototype usable when the local API is offline.
     }
+  }
+
+  function trackOutbound(store: string, affiliate: boolean) {
+    const outboundEvent = { productId: product.id, store, affiliate, clickedAt: new Date().toISOString() };
+    const stored = JSON.parse(window.localStorage.getItem('precovista-outbound-clicks') ?? '[]') as typeof outboundEvent[];
+    window.localStorage.setItem('precovista-outbound-clicks', JSON.stringify([...stored.slice(-49), outboundEvent]));
   }
 
   async function saveAlert(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const alert = { productId: product.id, email, targetPrice, savedAt: new Date().toISOString() };
-    window.localStorage.setItem(`precovista-alert-${product.id}`, JSON.stringify(alert));
+    window.localStorage.setItem(`precovista-alert-${product.id}`, JSON.stringify({ productId: product.id, email, targetPrice }));
     if (apiUrl && product.backendId) {
       try {
         await fetch(`${apiUrl}/api/watchlist`, {
@@ -156,7 +176,7 @@ export default function Home() {
           body: JSON.stringify({ email, product_id: product.backendId, target_price: targetPrice }),
         });
       } catch {
-        // Local storage keeps the prototype interaction reliable if the API is offline.
+        // Local storage is the prototype fallback.
       }
     }
     setAlertSaved(true);
@@ -165,140 +185,121 @@ export default function Home() {
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="PreçoVista — início">
-          <span className="brand-mark"><TrendingDown aria-hidden="true" /></span>
-          <span>Preço<span>Vista</span></span>
-        </a>
-        <nav className={menuOpen ? 'nav open' : 'nav'} aria-label="Navegação principal">
-          <a href="#analise">Como funciona</a><a href="#alerta">Meus alertas</a>
-          <span className="demo-pill"><span /> Dados demonstrativos</span>
-        </nav>
+        <a className="brand" href="#top" aria-label="PreçoVista — início"><span className="brand-mark"><TrendingDown /></span><span>Preço<span>Vista</span></span></a>
+        <nav className={menuOpen ? 'nav open' : 'nav'}><a href="#resultado">Análise</a><a href="#ofertas">Ofertas seguras</a><span className="demo-pill"><i /> Demonstração</span></nav>
         <button className="menu-button" onClick={() => setMenuOpen((value) => !value)} aria-label="Abrir menu">{menuOpen ? <X /> : <Menu />}</button>
       </header>
 
       <section className="hero" id="top">
-        <div className="hero-orb orb-one" /><div className="hero-orb orb-two" />
-        <div className="eyebrow"><Sparkles aria-hidden="true" /> Inteligência de preço para compras melhores</div>
-        <h1>O preço está bom.<br /><em>Ou parece que está?</em></h1>
-        <p>Veja o histórico, entenda a tendência e descubra se vale comprar agora ou esperar um pouco.</p>
-
+        <span className="eyebrow"><ShieldCheck /> Compra inteligente, sem complicação</span>
+        <h1>Vale a pena<br /><em>comprar agora?</em></h1>
+        <p>Pesquise o produto. A gente responde.</p>
         <div className="search-shell">
-          <Search aria-hidden="true" />
-          <input aria-label="Buscar um produto" placeholder="Busque por celular, notebook, TV..." value={query} onChange={(event) => setQuery(event.target.value)} />
-          <button type="button" onClick={() => searchResults[0] && selectProduct(searchResults[0])}>Analisar preço <ArrowRight aria-hidden="true" /></button>
-          {query && (
-            <div className="search-results">
-              <div className="search-results-label">Produtos encontrados no protótipo</div>
-              {searchResults.length ? searchResults.map((item) => (
-                <button key={item.id} onClick={() => selectProduct(item)}>
-                  <ProductIcon kind={item.kind} compact />
-                  <span><strong>{item.title}</strong><small>{item.category}</small></span>
-                  <span className="result-price">{money.format(item.currentPrice)}</span>
-                </button>
-              )) : <p>Nenhum resultado. Tente “Samsung”, “notebook”, “TV” ou “geladeira”.</p>}
-            </div>
-          )}
+          <Search />
+          <input aria-label="Buscar produto" placeholder="Celular, notebook, TV..." value={query} onChange={(event) => setQuery(event.target.value)} />
+          <button onClick={() => searchResults[0] && selectProduct(searchResults[0])}>Analisar <ArrowRight /></button>
+          {query && <div className="search-results">
+            {searchResults.length ? searchResults.map((item) => <button key={item.id} onClick={() => selectProduct(item)}>
+              <ProductIcon kind={item.kind} compact /><span><strong>{item.title}</strong><small>{money.format(item.currentPrice)}</small></span><ArrowRight />
+            </button>) : <p>Tente “Samsung”, “notebook”, “TV” ou “geladeira”.</p>}
+          </div>}
         </div>
-        <div className="popular-searches"><span>Experimente:</span>{['Samsung', 'Notebook', 'Smart TV', 'Geladeira'].map((term) => <button key={term} onClick={() => setQuery(term)}>{term}</button>)}</div>
+        <span className="filter-line"><ShieldCheck /> Comparamos grandes lojas e mostramos alternativas quando uma delas não tem o produto.</span>
       </section>
 
-      <section className="analysis-section" id="analise">
-        <div className="section-intro">
-          <div><span className="section-kicker">Análise em destaque</span><h2>Um sinal claro, sem adivinhação.</h2></div>
-          <p>Comparamos o preço de hoje com o comportamento recente do mesmo anúncio.</p>
-        </div>
-
-        <div className="product-panel">
-          <div className="product-summary">
+      <section className="result-section" id="resultado">
+        <article className="decision-card">
+          <div className="product-heading">
             <ProductIcon kind={product.kind} />
-            <div className="product-copy">
-              <div className="market-tag">MERCADO LIVRE <span>•</span> {product.category}</div>
-              <h3>{product.title}</h3>
-              <div className="price-row">
-                <strong>{money.format(product.currentPrice)}</strong>
-                <span className="discount"><ArrowDownRight /> {discount}%</span>
-                <small>era {money.format(product.originalPrice)}</small>
+            <div><small>{product.category} · dados simulados</small><h2>{product.title}</h2><span className="price">a partir de {money.format(product.currentPrice)}</span><del>{money.format(product.originalPrice)}</del></div>
+          </div>
+
+          <div className={isGoodTime ? 'answer good' : 'answer wait'}>
+            <span className="answer-icon">{isGoodTime ? <Check /> : <Info />}</span>
+            <div><small>Resposta PreçoVista</small><h3>{isGoodTime ? 'Pode comprar.' : 'Melhor esperar.'}</h3><p>{isGoodTime ? `Hoje está entre os ${product.percentile}% menores preços do histórico.` : 'O preço ainda está acima da faixa que consideramos atrativa.'}</p></div>
+            <strong>{product.confidence}%<small>confiança</small></strong>
+          </div>
+
+          <div className="trust-strip">
+            <span><ShieldCheck /><b>{product.trustScore}/100</b> oferta segura</span>
+            <span><Star fill="currentColor" /><b>{product.rating.toFixed(1)}</b> ({product.reviewCount.toLocaleString('pt-BR')})</span>
+            <span><Store /><b>{product.officialStore ? 'Loja oficial' : product.sellerName}</b></span>
+          </div>
+
+          <div className="action-grid">
+            <div className="offers-panel">
+              <div className="offers-heading"><div><strong>Onde comprar</strong><small>{availableOffers.length} lojas com este produto</small></div><span>Preços simulados</span></div>
+              <div className="offers-list">
+                {[...product.offers].sort((a, b) => Number(b.available) - Number(a.available) || a.price - b.price).map((offer) => {
+                  const affiliate = Boolean(offer.affiliateUrl);
+                  return <div className={offer.available ? 'offer-row' : 'offer-row unavailable'} key={offer.store}>
+                    <span className="store-logo">{offer.store.split(' ').map((part) => part[0]).join('').slice(0, 2)}</span>
+                    <span className="store-copy"><b>{offer.store}</b><small>{offer.note} · {offer.trustScore}/100</small></span>
+                    {offer.available ? <>
+                      <strong className="offer-price">{money.format(offer.price)}{offer.price === availableOffers[0]?.price && <small>melhor preço</small>}</strong>
+                      <a href={offer.affiliateUrl ?? offer.url} target="_blank" rel={affiliate ? 'noopener noreferrer sponsored' : 'noopener noreferrer'} onClick={() => trackOutbound(offer.store, affiliate)}>Ver loja <ExternalLink /></a>
+                    </> : <span className="not-found">Indisponível<small>Veja as outras lojas</small></span>}
+                  </div>;
+                })}
               </div>
             </div>
-            <a className="market-link" href="#alerta">Criar alerta <ArrowRight /></a>
-          </div>
-
-          <div className="signal-banner">
-            <div className={isGoodTime ? 'signal-icon good' : 'signal-icon wait'}>{isGoodTime ? <Check /> : <Info />}</div>
-            <div>
-              <span className="signal-label">Sinal PreçoVista</span>
-              <h4>{isGoodTime ? 'Bom momento para comprar' : 'Vale a pena esperar'}</h4>
-              <p>{isGoodTime
-                ? `O preço atual está entre os ${product.percentile}% mais baixos do histórico recente e a tendência continua favorável.`
-                : `O preço está acima da faixa historicamente atrativa. A tendência recente é de ${product.trend === 'rising' ? 'alta' : 'estabilidade'}.`}</p>
+            <div className="secondary-action">
+              <Bell />
+              <div><strong>Ainda não decidiu?</strong><span>Avisamos quando baixar.</span></div>
+              <button onClick={() => setShowAlert((value) => !value)}>{showAlert ? 'Fechar' : 'Criar alerta'}</button>
             </div>
-            <div className="confidence"><strong>{product.confidence}%</strong><span>confiança do sinal</span></div>
           </div>
 
-          <div className="analytics-grid">
-            <div className="chart-card">
-              <div className="card-heading"><div><span>Histórico de preço</span><h4>Últimos 90 dias</h4></div><button>90 dias <ChevronDown /></button></div>
-              <div className="chart-wrap" aria-label="Gráfico do histórico de preços">
+          {showAlert && <form className="alert-form" onSubmit={saveAlert}>
+            {alertSaved ? <div className="alert-success"><Check /><span><b>Alerta criado.</b> Vamos acompanhar este preço.</span></div> : <>
+              <label>Preço desejado <span className="input-wrap"><b>R$</b><input inputMode="numeric" value={targetPrice} onChange={(event) => setTargetPrice(event.target.value.replace(/\D/g, ''))} required /></span></label>
+              <label>Seu e-mail <input type="email" placeholder="voce@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
+              <button type="submit">Ativar alerta <ArrowRight /></button>
+            </>}
+          </form>}
+
+          <div className="details-row">
+            <details>
+              <summary>Ver histórico simulado <ChevronDown /></summary>
+              <div className="chart-panel">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={product.history} margin={{ top: 16, right: 12, bottom: 0, left: 0 }}>
-                    <defs><linearGradient id="priceFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#20b875" stopOpacity={0.28} /><stop offset="100%" stopColor="#20b875" stopOpacity={0} /></linearGradient></defs>
+                  <AreaChart data={product.history} margin={{ top: 14, right: 8, bottom: 0, left: 0 }}>
+                    <defs><linearGradient id="priceFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#20b875" stopOpacity={0.25} /><stop offset="100%" stopColor="#20b875" stopOpacity={0} /></linearGradient></defs>
                     <CartesianGrid vertical={false} stroke="#e8e7e2" strokeDasharray="4 6" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} minTickGap={28} tick={{ fill: '#7c817d', fontSize: 11 }} />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} minTickGap={30} tick={{ fill: '#7c817d', fontSize: 10 }} />
                     <YAxis hide domain={['dataMin - 120', 'dataMax + 80']} />
-                    <Tooltip content={<PriceTooltip />} cursor={{ stroke: '#173f34', strokeDasharray: '3 4' }} />
+                    <Tooltip content={<PriceTooltip />} />
                     <ReferenceLine y={product.marketAverage} stroke="#ef8b64" strokeDasharray="5 5" />
-                    <Area type="monotone" dataKey="price" stroke="#159764" strokeWidth={3} fill="url(#priceFill)" activeDot={{ r: 5, fill: '#fff', stroke: '#159764', strokeWidth: 3 }} />
+                    <Area type="monotone" dataKey="price" stroke="#159764" strokeWidth={3} fill="url(#priceFill)" />
                   </AreaChart>
                 </ResponsiveContainer>
+                <span>Menor preço diário entre lojas · <b>dados demonstrativos, não extraídos das lojas</b><br />Menor: <b>{money.format(product.lowestPrice)}</b> · Média: <b>{money.format(product.marketAverage)}</b></span>
               </div>
-              <div className="chart-legend"><span><i className="green" /> Preço observado</span><span><i className="coral" /> Média do período: {money.format(product.marketAverage)}</span></div>
-            </div>
-
-            <aside className="insight-card">
-              <div className="insight-heading"><Target /><span>Posição no histórico</span></div>
-              <div className="percentile-ring" style={{ '--score': `${product.percentile * 3.6}deg` } as React.CSSProperties}><div><strong>{product.percentile}º</strong><span>percentil</span></div></div>
-              <p>Em apenas <strong>{product.percentile}% dos dias</strong> o preço esteve mais baixo que hoje.</p>
-              <div className="mini-stats"><div><span>Menor preço</span><strong>{money.format(product.lowestPrice)}</strong></div><div><span>Média recente</span><strong>{money.format(product.marketAverage)}</strong></div></div>
-            </aside>
+            </details>
+            <details>
+              <summary>Como verificamos a oferta <ChevronDown /></summary>
+              <ul className="safety-list">
+                <li><Check /> Produto novo e anúncio ativo</li>
+                <li><Check /> Nota mínima 4,5 e mais de 100 opiniões</li>
+                <li><Check /> Vendedor verde: {product.sellerLevel}</li>
+                <li><Check /> Preço sem anomalia crítica</li>
+              </ul>
+            </details>
           </div>
-        </div>
+          <p className="disclosure"><b>Transparência:</b> preços, avaliações e histórico deste protótipo são simulados. Na versão conectada, cada oferta exibirá fonte e horário da última atualização. Links podem gerar comissão sem custo extra; a comissão nunca altera o ranking.</p>
+        </article>
       </section>
 
-      <section className="alert-section" id="alerta">
-        <div className="alert-copy">
-          <span className="section-kicker light">Alerta inteligente</span><h2>Você escolhe o preço.<br />A gente acompanha.</h2>
-          <p>Receba um aviso quando a oferta chegar no valor que faz sentido para você.</p>
-          <div className="trust-line"><ShieldCheck /> Sem spam. Só avisamos quando houver uma mudança importante.</div>
-        </div>
-        <form className="alert-form" onSubmit={saveAlert}>
-          {alertSaved ? (
-            <div className="success-state"><div><Check /></div><h3>Alerta criado!</h3><p>Vamos simular um aviso quando {product.title} chegar a <strong>{money.format(Number(targetPrice))}</strong>.</p><button type="button" onClick={() => setAlertSaved(false)}>Editar alerta</button></div>
-          ) : (
-            <>
-              <div className="form-title"><Bell /><div><span>Avise-me quando chegar a</span><strong>{product.title}</strong></div></div>
-              <label>Preço desejado<div className="currency-input"><span>R$</span><input inputMode="numeric" value={targetPrice} onChange={(event) => setTargetPrice(event.target.value.replace(/\D/g, ''))} required /></div></label>
-              <label>Seu melhor e-mail<input type="email" placeholder="voce@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-              <button className="save-alert" type="submit">Criar alerta gratuito <ArrowRight /></button>
-              <small>Protótipo: o alerta fica salvo somente neste dispositivo.</small>
-            </>
-          )}
-        </form>
-      </section>
-
-      <section className="other-products">
-        <div className="section-intro compact"><div><span className="section-kicker">Outras análises</span><h2>Continue explorando</h2></div></div>
+      <section className="more-section" id="ofertas">
+        <div><span>Outras ofertas verificadas</span><h2>Escolha e veja a resposta.</h2></div>
         <div className="product-cards">
-          {products.filter((item) => item.id !== product.id).slice(0, 3).map((item) => (
-            <button key={item.id} className="product-card" onClick={() => selectProduct(item)}>
-              <ProductIcon kind={item.kind} compact />
-              <span className="product-card-copy"><small>{item.category}</small><strong>{item.title}</strong><span>{money.format(item.currentPrice)}</span></span>
-              <span className={item.percentile < 20 ? 'card-signal good' : 'card-signal'}>{item.percentile < 20 ? 'Bom preço' : 'Acompanhar'}</span>
-            </button>
-          ))}
+          {products.filter((item) => item.id !== product.id).slice(0, 5).map((item) => <button key={item.id} onClick={() => selectProduct(item)}>
+            <ProductIcon kind={item.kind} compact /><span><strong>{item.title}</strong><small>{money.format(item.currentPrice)} · {item.rating.toFixed(1)} ★</small></span><ArrowRight />
+          </button>)}
         </div>
       </section>
 
-      <footer><a className="brand footer-brand" href="#top"><span className="brand-mark"><TrendingDown /></span><span>Preço<span>Vista</span></span></a><p>Decisões melhores começam com preços mais claros.</p><span>Protótipo MVP • Dados demonstrativos</span></footer>
+      <footer><a className="brand" href="#top"><span className="brand-mark"><TrendingDown /></span><span>Preço<span>Vista</span></span></a><p>Preço claro. Oferta segura. Decisão simples.</p><small>Protótipo com dados demonstrativos</small></footer>
     </main>
   );
 }
