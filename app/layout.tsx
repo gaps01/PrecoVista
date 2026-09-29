@@ -7,17 +7,17 @@ const siteUrl = new URL(
 
 export const metadata: Metadata = {
   metadataBase: siteUrl,
-  title: 'PreçoVista — Inteligência para comprar na hora certa',
-  description: 'Histórico de preços, sinais de compra e alertas para produtos do Mercado Livre.',
+  title: 'PreçoVista — Decisão de compra, sem ruído',
+  description: 'Compare preços, reputação e histórico entre grandes lojas antes de decidir a compra.',
   openGraph: {
-    title: 'PreçoVista — Inteligência para comprar na hora certa',
-    description: 'Histórico de preços, sinais de compra e alertas para produtos do Mercado Livre.',
-    images: [{ url: '/og.png', width: 1536, height: 816, alt: 'PreçoVista — Inteligência para comprar na hora certa' }],
+    title: 'PreçoVista — Decisão de compra, sem ruído',
+    description: 'Compare preços, reputação e histórico entre grandes lojas antes de decidir a compra.',
+    images: [{ url: '/og.png', width: 1536, height: 816, alt: 'PreçoVista — comparação e decisão de compra' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PreçoVista — Inteligência para comprar na hora certa',
-    description: 'Histórico de preços, sinais de compra e alertas para produtos do Mercado Livre.',
+    title: 'PreçoVista — Decisão de compra, sem ruído',
+    description: 'Compare preços, reputação e histórico entre grandes lojas antes de decidir a compra.',
     images: ['/og.png'],
   },
 };
