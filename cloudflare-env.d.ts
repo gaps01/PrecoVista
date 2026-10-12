@@ -1,0 +1,11 @@
+interface CloudflareEnv {
+  DB?: D1Database;
+  MERCADO_LIVRE_SITE_ID?: string;
+  MERCADO_LIVRE_CLIENT_ID?: string;
+  MERCADO_LIVRE_CLIENT_SECRET?: string;
+  MERCADO_LIVRE_ACCESS_TOKEN?: string;
+  MERCADO_LIVRE_REFRESH_TOKEN?: string;
+  MERCADO_LIVRE_TOKEN_ENCRYPTION_KEY?: string;
+  PRECOVISTA_ADMIN_USER_ID?: string;
+  PUBLIC_SITE_URL?: string;
+}

@@ -12,13 +12,13 @@ import {
 
 import { demoProducts, type DemoProduct, type ProductKind, type RetailOffer } from './demo-data';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
 type ApiProductSummary = {
-  id: number; external_id: string; title: string; category: string; current_price: string;
+  id: number | string; external_id: string; title: string; category: string; current_price: string;
   rating?: number; review_count?: number; sold_count?: string; seller_name?: string;
   seller_level?: DemoProduct['sellerLevel']; official_store?: boolean; trust_score?: number;
-  listing_url?: string; affiliate_url?: string;
+  listing_url?: string; affiliate_url?: string; source_updated_at?: string;
 };
 
 type ApiProductDetail = ApiProductSummary & {
@@ -58,14 +58,15 @@ function inferKind(title: string, category: string): ProductKind {
 }
 
 function mapApiDetail(detail: ApiProductDetail): DemoProduct {
-  const prices = detail.history.map((point) => Number(point.price));
   const currentPrice = Number(detail.current_price);
+  const prices = detail.history.map((point) => Number(point.price)).filter(Number.isFinite);
+  const comparablePrices = prices.length ? prices : [currentPrice];
   const formatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' });
   return {
-    id: detail.external_id, backendId: detail.id, kind: inferKind(detail.title, detail.category),
+    id: detail.external_id, backendId: detail.id, dataSource: 'live', kind: inferKind(detail.title, detail.category),
     title: detail.title, category: detail.category, currentPrice,
-    originalPrice: Math.max(...prices, currentPrice), lowestPrice: Math.min(...prices, currentPrice),
-    marketAverage: Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length),
+    originalPrice: Math.max(...comparablePrices, currentPrice), lowestPrice: Math.min(...comparablePrices, currentPrice),
+    marketAverage: Math.round(comparablePrices.reduce((sum, price) => sum + price, 0) / comparablePrices.length),
     percentile: detail.prediction.current_percentile, confidence: detail.prediction.confidence_score,
     trend: detail.prediction.predicted_trend, rating: detail.rating ?? 0,
     reviewCount: detail.review_count ?? 0, soldCount: detail.sold_count ?? 'Vendas não informadas',
@@ -95,6 +96,7 @@ export default function Home() {
   const [alertSaved, setAlertSaved] = useState(false);
   const [cashbackOffer, setCashbackOffer] = useState<RetailOffer | null>(null);
   const [cashbackEmail, setCashbackEmail] = useState('');
+  const [liveDataAvailable, setLiveDataAvailable] = useState(false);
 
   const product = products.find((item) => item.id === selectedId) ?? products[0];
   const isGoodTime = product.percentile < 20;
@@ -109,7 +111,7 @@ export default function Home() {
   }, [apiSearchResults, products, query]);
 
   useEffect(() => {
-    if (!apiUrl || query.trim().length < 2) {
+    if (query.trim().length < 2) {
       setApiSearchResults(null);
       return;
     }
@@ -123,7 +125,7 @@ export default function Home() {
           const existing = products.find((entry) => entry.id === item.external_id);
           if (existing) return { ...existing, backendId: item.id, currentPrice: Number(item.current_price) };
           return {
-            id: item.external_id, backendId: item.id, kind: inferKind(item.title, item.category),
+            id: item.external_id, backendId: item.id, dataSource: 'live' as const, kind: inferKind(item.title, item.category),
             title: item.title, category: item.category, currentPrice: Number(item.current_price),
             originalPrice: Number(item.current_price), lowestPrice: Number(item.current_price),
             marketAverage: Number(item.current_price), percentile: 50, confidence: 45, trend: 'stable' as const,
@@ -147,6 +149,15 @@ export default function Home() {
   }, [products, query]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    fetch(`${apiUrl}/api/data-status`, { signal: controller.signal, cache: 'no-store' })
+      .then(async (response) => response.ok ? await response.json() as { mode?: string } : null)
+      .then((status) => setLiveDataAvailable(status?.mode === 'live'))
+      .catch(() => setLiveDataAvailable(false));
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
     setTargetPrice(String(Math.floor(product.currentPrice * 0.9)));
     setShowAlert(false);
     setAlertSaved(false);
@@ -157,7 +168,7 @@ export default function Home() {
     setSelectedId(item.id);
     setQuery('');
     window.setTimeout(() => document.getElementById('resultado')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 20);
-    if (!apiUrl || !item.backendId) return;
+    if (!item.backendId) return;
     try {
       const response = await fetch(`${apiUrl}/api/products/${item.backendId}`);
       if (!response.ok) return;
@@ -208,7 +219,7 @@ export default function Home() {
     <main id="top">
       <header className="site-header">
         <a className="brand" href="#top" aria-label="PreçoVista — início"><span className="brand-signal"><i /></span><b>PreçoVista</b></a>
-        <span className="demo-label">PROTÓTIPO · DADOS SIMULADOS</span>
+        <span className="demo-label">{liveDataAvailable ? 'BETA · BUSCA REAL DISPONÍVEL' : 'PROTÓTIPO · INTEGRAÇÃO AGUARDANDO'}</span>
       </header>
 
       <section className="focus-stage" id="resultado">
@@ -291,7 +302,7 @@ export default function Home() {
           <div className="price-proof">
             <div className="proof-copy"><span><small>HOJE</small><b>{money.format(product.currentPrice)}</b></span><span><small>MENOR</small><b>{money.format(product.lowestPrice)}</b></span><span><small>MÉDIA</small><b>{money.format(product.marketAverage)}</b></span></div>
             <div className="chart-panel"><ResponsiveContainer width="100%" height="100%"><AreaChart data={product.history} margin={{ top: 15, right: 8, bottom: 0, left: 0 }}><CartesianGrid vertical={false} stroke="#e4e3df" /><XAxis dataKey="date" axisLine={false} tickLine={false} minTickGap={34} tick={{ fill: '#747477', fontSize: 11 }} /><YAxis hide domain={['dataMin - 120', 'dataMax + 80']} /><Tooltip content={<PriceTooltip />} /><ReferenceLine y={product.marketAverage} stroke="#ff684d" strokeDasharray="4 4" /><Area type="monotone" dataKey="price" stroke="#4d38db" strokeWidth={3} fill="#4d38db" fillOpacity={0.07} /></AreaChart></ResponsiveContainer></div>
-            <p>Histórico demonstrativo, não extraído das lojas.</p>
+            <p>{product.dataSource === 'live' ? 'Histórico registrado pelo PreçoVista desde a primeira consulta desta oferta.' : 'Histórico demonstrativo, não extraído das lojas.'}</p>
           </div>
         </details>
 
@@ -306,7 +317,7 @@ export default function Home() {
         <div>{products.filter((item) => item.id !== product.id).slice(0, 5).map((item) => <button key={item.id} onClick={() => selectProduct(item)}><ProductIcon kind={item.kind} compact /><span><b>{item.title}</b><small>{money.format(item.currentPrice)}</small></span></button>)}</div>
       </section>
 
-      <section className="disclosure"><Info /><p><b>Transparência:</b> preços, avaliações, cashback e histórico são simulados neste protótipo. A versão conectada exibirá fonte e horário de atualização.</p></section>
+      <section className="disclosure"><Info /><p><b>Transparência:</b> {product.dataSource === 'live' ? 'esta oferta, sua avaliação e reputação vieram da integração oficial. O histórico começa na primeira coleta; cashback continua indisponível até a aprovação dos programas de afiliados.' : 'o produto exibido, seus preços, avaliações, cashback e histórico são demonstrativos. Buscas reais serão ativadas após a autorização da conta do Mercado Livre.'}</p></section>
 
       <footer><a className="brand" href="#top"><span className="brand-signal"><i /></span><b>PreçoVista</b></a><span>Preço claro. Decisão simples.</span></footer>
     </main>

@@ -15,7 +15,8 @@ export type RetailOffer = {
 
 export type DemoProduct = {
   id: string;
-  backendId?: number;
+  backendId?: number | string;
+  dataSource?: 'demo' | 'live';
   kind: ProductKind;
   title: string;
   category: string;

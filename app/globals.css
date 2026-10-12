@@ -293,3 +293,54 @@ footer .brand { color: var(--ink); }
   html { scroll-behavior: auto; }
   * { transition: none !important; }
 }
+
+.admin-page { min-height: 100vh; padding: 72px 24px; background: var(--paper); }
+.admin-shell { width: min(940px, 100%); margin: 0 auto; }
+.admin-back { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: .78rem; font-weight: 800; }
+.admin-back svg { width: 16px; }
+.admin-heading { margin: 64px 0 34px; }
+.admin-heading > p { margin: 0 0 12px; color: var(--violet); font-size: .68rem; font-weight: 900; letter-spacing: .09em; }
+.admin-heading h1 { margin: 0 0 14px; font-size: clamp(2.8rem, 7vw, 5.6rem); line-height: .9; letter-spacing: -.07em; }
+.admin-heading > span { display: block; max-width: 610px; color: var(--muted); line-height: 1.55; }
+.admin-notice { margin-bottom: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 9px; border-radius: 14px; background: #ffe0da; font-size: .82rem; font-weight: 800; }
+.admin-notice.success { background: var(--mint); }
+.admin-notice svg { width: 18px; }
+.integration-card { padding: 28px; display: grid; grid-template-columns: 70px 1fr 190px; gap: 26px; border-radius: 28px; background: white; box-shadow: 0 20px 70px rgba(31, 28, 26, .08); }
+.integration-mark { width: 70px; height: 70px; display: grid; place-items: center; border-radius: 22px; background: #ffe600; color: #253a85; font-size: 1.25rem; font-weight: 950; }
+.integration-copy small { color: var(--violet); font-size: .65rem; font-weight: 900; letter-spacing: .08em; }
+.integration-copy h2 { margin: 7px 0 8px; font-size: 1.65rem; letter-spacing: -.04em; }
+.integration-copy p { margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.5; }
+.integration-copy dl { margin: 22px 0 0; display: grid; gap: 8px; }
+.integration-copy dl > div { display: grid; grid-template-columns: 120px 1fr; gap: 12px; font-size: .72rem; }
+.integration-copy dt { color: var(--muted); }
+.integration-copy dd { margin: 0; overflow-wrap: anywhere; font-weight: 750; }
+.integration-action { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 22px; }
+.integration-action > p { margin: 0; color: var(--muted); font-size: .72rem; line-height: 1.45; text-align: right; }
+.status-pill { padding: 7px 9px; border-radius: 99px; background: #eeeae4; color: var(--muted); font-size: .6rem; font-weight: 950; letter-spacing: .09em; }
+.status-pill.live { background: var(--lime); color: var(--ink); }
+.admin-primary { min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 13px; background: var(--ink); color: white; font-size: .76rem; font-weight: 900; }
+.admin-primary svg { width: 16px; }
+.admin-next { margin-top: 28px; display: grid; gap: 1px; }
+.admin-next > span { margin-bottom: 12px; color: var(--muted); font-size: .65rem; font-weight: 900; letter-spacing: .09em; }
+.admin-next > div { padding: 16px 18px; display: flex; justify-content: space-between; gap: 20px; background: rgba(255, 255, 255, .58); }
+.admin-next > div:first-of-type { border-radius: 16px 16px 0 0; }
+.admin-next > div:last-child { border-radius: 0 0 16px 16px; }
+.admin-next small { color: var(--muted); }
+.admin-gate { min-height: calc(100vh - 144px); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
+.admin-gate > svg { width: 48px; height: 48px; padding: 12px; border-radius: 17px; background: var(--lime); }
+.admin-gate > p:first-of-type { margin: 24px 0 6px; color: var(--violet); font-size: .68rem; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.admin-gate h1 { max-width: 680px; margin: 0 0 15px; font-size: clamp(2.3rem, 6vw, 4.8rem); line-height: .95; letter-spacing: -.065em; }
+.admin-gate h1 + p { max-width: 560px; margin: 0 0 28px; color: var(--muted); line-height: 1.55; }
+.admin-gate .admin-back { margin-top: 24px; }
+
+@media (max-width: 760px) {
+  .admin-page { padding: 42px 16px; }
+  .admin-heading { margin-top: 46px; }
+  .integration-card { grid-template-columns: 56px 1fr; padding: 20px; gap: 18px; }
+  .integration-mark { width: 56px; height: 56px; border-radius: 17px; }
+  .integration-action { grid-column: 1 / -1; align-items: stretch; }
+  .integration-action > p { text-align: left; }
+  .status-pill { align-self: flex-start; }
+  .integration-copy dl > div { grid-template-columns: 1fr; gap: 3px; }
+  .admin-next > div { flex-direction: column; gap: 5px; }
+}
