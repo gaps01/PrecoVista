@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   metadataBase: siteUrl,
   title: 'PreçoVista — Decisão de compra, sem ruído',
   description: 'Compare preços, reputação e histórico entre grandes lojas antes de decidir a compra.',
+  icons: { icon: '/favicon.svg' },
   openGraph: {
     title: 'PreçoVista — Decisão de compra, sem ruído',
     description: 'Compare preços, reputação e histórico entre grandes lojas antes de decidir a compra.',
